@@ -1,4 +1,7 @@
 import boto3
+import time
+import sys
+import re
 
 DEFAULT_REGION='eu-west-1'
 DEFAULT_BUCKET='s3://glue-demo-mtakanen'
@@ -10,7 +13,13 @@ DATABASE_NAME='demo'
 CRAWLER_NAME='demo-crawler'
 
 JOB_NAME_INCIDENTS='demo-job-incidents'
-ETL_COMMAND_NAME_INCIDENTS='demo-etl-incidents'
+JOB_NAME_WEATHER='demo-job-weather'
+ETL_COMMAND_NAME='glueetl' 
+# Documented here: 
+# https://docs.aws.amazon.com/glue/latest/webapi/API_JobCommand.html
+
+ETL_SCRIPT_INCIDENTS='demo-etl-incidents.py'
+ETL_SCRIPT_WEATHER='demo-etl-weather.py'
 ETL_SCRIPT_DIR=DEFAULT_BUCKET+'/etl-scripts'
 S3_TEMP_DIR=DEFAULT_BUCKET+'/tmp'
 MIN_DPU_CAPACITY=2
@@ -19,7 +28,6 @@ def create_crawler(client, crawler_name, crawler_description, aws_role,
                    db_name, s3_target_path):
 
     print 'create_crawler()'
-
     try:
         response = client.create_crawler(
             Name=crawler_name,
@@ -40,7 +48,7 @@ def create_crawler(client, crawler_name, crawler_description, aws_role,
                 'DeleteBehavior': 'DEPRECATE_IN_DATABASE'
             }       
         )
-        print response
+        print 'Crated crawler %s.' %crawler_name
     except client.exceptions.AlreadyExistsException as e:
         print 'Crawler "%s" already exists. Use existing crawler!' %crawler_name
 
@@ -55,38 +63,45 @@ def start_crawler(glue_client,crawler_name):
     except glue_client.exceptions.OperationTimeoutException as e:
         print e
 
-def wait_crawler(client, crawler_name, exit_state):
-    # boto3 doesn't have built-in waiters for glue crawler.
-    # poll crawler status
-    import time
 
-    print 'wait_crawler()'
+def poll_crawler_state(client, crawler_name):
     try:
         response = client.get_crawler(Name=crawler_name)
+        return response.get('Crawler').get('State')
     except glue_client.exceptions.EntityNotFoundException as e:
-        print 'Nothing to wait. Crawler %s does not exist.' %crawler_name
-        return
+        print 'Crawler not found (%s).' %crawler_name
+
+def poll_job_run_state(client, job_name, run_id):
+    try:
+        jr = client.get_job_run(JobName=job_name, RunId=run_id)
+        return jr.get('JobRun').get('JobRunState')
+    except client.exceptions.EntityNotFoundException as e:
+        print 'Job run not found (RunId:%s).' %run_id
+
+# boto3 doesn't have built-in waiters for glue crawler.
+# poll crawler status
+def wait_state(exit_pattern, poll_function, *args):
 
     prev_state=''
-    state = response.get('Crawler').get('State')
-    print 'Initial crawler state: %s' %state
-
-    while state != exit_state:
-        time.sleep(3)
-        response = client.get_crawler(Name=crawler_name)
-        state = response.get('Crawler').get('State')
-        if state == prev_state:
-            print '.'
-        else:
-            print state
+    while True:
+        state = poll_function(*args)
+        if not state:
+            break
+        if state != prev_state:
+            print '\n'+state
             prev_state = state
+        else:
+            print '.', # discard newline, (python2.x only)
+            sys.stdout.flush()
+        if exit_pattern.match(state):
+            break        
+        time.sleep(3)
 
-    print 'Crawler is in wait exit state: %s' %exit_state
 
 def show_tables(client, db_name):
 
     print 'show_tables()'
-    print '\tDatabase: %s' %db_name
+    print '\nDatabase: %s' %db_name
     try:
         response = client.get_tables(DatabaseName=db_name)
     except client.exceptions.EntityNotFoundException as e:
@@ -95,15 +110,15 @@ def show_tables(client, db_name):
 
     tables = response.get('TableList')
     for table in tables:
-        print 'Name: %s' %table['Name']
+        print 'Table name: %s' %table['Name']
         print 'Classification: %s' %table.get('Parameters').get('classification')
         storage_desc = table.get('StorageDescriptor')
         print 'Location: %s' %storage_desc.get('Location')
 
         print 'Serde params: %s' %repr(storage_desc.get('SerdeInfo').get('Parameters'))
         print 'Last updated: %s' %table.get('UpdateTime')
-        print ''
-        print 'Schema'
+
+        print '\nSchema'
         print 'Column name\tData type'
         for column in storage_desc.get('Columns'):
             row = '%s\t%s' %(column['Name'], column['Type'])
@@ -114,7 +129,8 @@ def show_tables(client, db_name):
 
 
 def create_job(client, job_name, job_description, aws_role, 
-               etl_command_name, etl_script_location):
+               etl_script_location):
+
     print 'create_job()'
     try:
         resp = client.create_job(Name=job_name, 
@@ -122,7 +138,7 @@ def create_job(client, job_name, job_description, aws_role,
                                  Role=aws_role,
                                  Command=
                                  {    
-                                     'Name':etl_command_name, 
+                                     'Name' : ETL_COMMAND_NAME, 
                                      'ScriptLocation': etl_script_location
                                  }, 
                                  DefaultArguments= 
@@ -133,45 +149,98 @@ def create_job(client, job_name, job_description, aws_role,
                                  },
                                  AllocatedCapacity=MIN_DPU_CAPACITY, 
                                  MaxRetries=0)
-        print '%s created.'%resp['Name']
-    except Exception as e:
+        print 'Created job %s.'%resp['Name']
+    except client.exceptions.AlreadyExistsException as e:
         print e
+    except client.exceptions.ConcurrentModificationException as e:
+        print e
+    except client.exceptions.IdempotentParameterMismatchException as e:
+        print e
+    except client.exceptions.InternalServiceException as e:
+        print e
+    except client.exceptions.InvalidInputException as e:
+        print e
+    except client.exceptions.OperationTimeoutException as e:
+        print e
+    except client.exceptions.ResourceNumberLimitExceededException as e:
+        print e
+
+def start_job_run(client, job_name):
+
+    print 'run_job()'
+    run_id = -1
+
+    try:
+        resp = client.start_job_run(JobName=job_name,
+                                    AllocatedCapacity=MIN_DPU_CAPACITY)
+        run_id = resp.get('JobRunId')
+        print 'Job run started (JobRunId:%s).' %run_id
+    except client.exceptions.ConcurrentRunsExceededException as e:
+        print e
+    except client.exceptions.EntityNotFoundException as e:
+        print e
+    except client.exceptions.InternalServiceException as e:
+        print e
+    except client.exceptions.InvalidInputException as e:
+        print e
+    except client.exceptions.OperationTimeoutException as e:
+        print e
+    except client.exceptions.ResourceNumberLimitExceededException as e:
+        print e
+
+    return run_id
+
 
 def main():
     glue_endpoint = GLUE_ENDPOINT
     region = DEFAULT_REGION
     role = DEFAULT_SERVICE_ROLE
-    crawler_name = CRAWLER_NAME
     s3_input_path = S3_INPUT_PATH
     db_name = DATABASE_NAME
 
     glue_client = boto3.client(service_name='glue', region_name=region,
                                endpoint_url='https://%s.%s.amazonaws.com' 
                                %(glue_endpoint, region))
-    
+
     create_crawler(client=glue_client,
-                   crawler_name=crawler_name,
+                   crawler_name=CRAWLER_NAME,
                    crawler_description='Crawler for demo data',
                    aws_role=role,
                    db_name=db_name,
                    s3_target_path=s3_input_path)
 
-    start_crawler(glue_client, crawler_name) # FIXME: save pennies, assumes db_name exists in Glue DataCatalogue
+    start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes db_name exists in Glue DataCatalogue
     # start_crawler is asyncronous -> wait until crawler is in ready state
-    wait_crawler(glue_client, crawler_name, 'READY')
+    exit_pattern = re.compile('READY')
+    wait_state(exit_pattern, poll_crawler_state, 
+               glue_client, CRAWLER_NAME)
     show_tables(glue_client, db_name)
 
-    job_name = JOB_NAME_INCIDENTS
-    etl_command_name = ETL_COMMAND_NAME_INCIDENTS
-    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_COMMAND_NAME_INCIDENTS+'.py'
-
+    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
     create_job(client=glue_client, 
-               job_name=job_name,
+               job_name=JOB_NAME_INCIDENTS,
                job_description='A job for incidents ETL.',
                aws_role=role,
-               etl_command_name=etl_command_name,
                etl_script_location=etl_script_location)
-    
+
+    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_WEATHER
+    create_job(client=glue_client, 
+               job_name=JOB_NAME_WEATHER,
+               job_description='A job for weather ETL.',
+               aws_role=role,
+               etl_script_location=etl_script_location)
+
+    run_id = start_job_run(client=glue_client, job_name=JOB_NAME_INCIDENTS)
+
+    exit_pattern = re.compile('SUCCEEDED|FAILED|STOPPED')
+    wait_state(exit_pattern, poll_job_run_state, 
+               glue_client, JOB_NAME_INCIDENTS, run_id)
+
+    run_id = start_job_run(client=glue_client, job_name=JOB_NAME_WEATHER)
+    wait_state(exit_pattern, poll_job_run_state, 
+               glue_client, JOB_NAME_WEATHER, run_id)
+
+
 if __name__ == '__main__':
     main()
          
