@@ -30,5 +30,7 @@ ETL_COMMAND_NAME='glueetl'
 MIN_DPU_CAPACITY=2
 
 # magic delay to allow IAM role to propagate other services
-IAM_PROPAGATION_DELAY=10
+IAM_PROPAGATION_DELAY=9
 
+# interval in seconds for polling service state
+POLL_INTERVAL=3
