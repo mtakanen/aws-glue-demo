@@ -2,27 +2,10 @@ import boto3
 import time
 import sys
 import re
+from demo_config import *
 
-DEFAULT_REGION='eu-west-1'
-DEFAULT_BUCKET='s3://glue-demo-mtakanen'
 DEFAULT_SERVICE_ROLE='arn:aws:iam::051356523739:role/service-role/AWSGlueServiceRole-DefaultRole'
 
-GLUE_ENDPOINT='glue'
-S3_INPUT_PATH=DEFAULT_BUCKET+'/data/input'
-DATABASE_NAME='demo'
-CRAWLER_NAME='demo-crawler'
-
-JOB_NAME_INCIDENTS='demo-job-incidents'
-JOB_NAME_WEATHER='demo-job-weather'
-ETL_COMMAND_NAME='glueetl' 
-# Documented here: 
-# https://docs.aws.amazon.com/glue/latest/webapi/API_JobCommand.html
-
-ETL_SCRIPT_INCIDENTS='demo-etl-incidents.py'
-ETL_SCRIPT_WEATHER='demo-etl-weather.py'
-ETL_SCRIPT_DIR=DEFAULT_BUCKET+'/etl-scripts'
-S3_TEMP_DIR=DEFAULT_BUCKET+'/tmp'
-MIN_DPU_CAPACITY=2
 
 def create_crawler(client, crawler_name, crawler_description, aws_role, 
                    db_name, s3_target_path):
@@ -88,13 +71,16 @@ def wait_state(exit_pattern, poll_function, *args):
         if not state:
             break
         if state != prev_state:
-            print '\n'+state
             prev_state = state
+            print('\n%s' %state), # discard newline, (python2.x only)
+            sys.stdout.flush() 
         else:
-            print '.', # discard newline, (python2.x only)
+            print('.'),
             sys.stdout.flush()
         if exit_pattern.match(state):
+            print ''
             break        
+
         time.sleep(3)
 
 
@@ -195,7 +181,7 @@ def main():
     glue_endpoint = GLUE_ENDPOINT
     region = DEFAULT_REGION
     role = DEFAULT_SERVICE_ROLE
-    s3_input_path = S3_INPUT_PATH
+    data_input_path = DATA_INPUT_PATH
     db_name = DATABASE_NAME
 
     glue_client = boto3.client(service_name='glue', region_name=region,
@@ -207,7 +193,7 @@ def main():
                    crawler_description='Crawler for demo data',
                    aws_role=role,
                    db_name=db_name,
-                   s3_target_path=s3_input_path)
+                   s3_target_path=data_input_path)
 
     start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes db_name exists in Glue DataCatalogue
     # start_crawler is asyncronous -> wait until crawler is in ready state
@@ -216,6 +202,7 @@ def main():
                glue_client, CRAWLER_NAME)
     show_tables(glue_client, db_name)
 
+    '''
     etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
     create_job(client=glue_client, 
                job_name=JOB_NAME_INCIDENTS,
@@ -240,7 +227,7 @@ def main():
     wait_state(exit_pattern, poll_job_run_state, 
                glue_client, JOB_NAME_WEATHER, run_id)
 
-
+    '''
 if __name__ == '__main__':
     main()
          
