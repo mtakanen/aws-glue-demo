@@ -4,7 +4,7 @@ from demo_config import *
 
 S3_RESOURCE_ARN="arn:aws:s3:::%s/*" %DEFAULT_BUCKET_NAME
 
-DEMO_POLICY = {
+RESOURCE_POLICY = {
     # "Description": "Grants access to a S3 bucket.",
     # raises MalformedPolicyDocumentException!
     "Version": "2012-10-17",
@@ -40,7 +40,7 @@ def create_policy(iam_client, policy_name):
     try:
         response = iam_client.create_policy(
             PolicyName=policy_name,
-            PolicyDocument=json.dumps(DEMO_POLICY))
+            PolicyDocument=json.dumps(RESOURCE_POLICY))
         policy_arn = response.get('Policy').get('Arn')
     except iam_client.exceptions.EntityAlreadyExistsException as e:
         print e
@@ -82,7 +82,6 @@ def delete_demo_role_policy():
     except iam_client.exceptions.NoSuchEntityException as e:
         print e
 
-import time
 def create_demo_role_policy(session):
 
     iam_client = session.client('iam')
@@ -92,7 +91,7 @@ def create_demo_role_policy(session):
     #inline role policy, !work
     #iam_client.put_role_policy(RoleName=DEMO_ROLE_NAME, 
     #                           PolicyName=DEMO_POLICY_NAME,
-    #                           PolicyDocument=json.dumps(DEMO_POLICY))
+    #                           PolicyDocument=json.dumps(RESOURCE_POLICY))
 
     # attach AWS managed policy for Glue
     iam_client.attach_role_policy(PolicyArn=AWS_GLUE_SERVICE_POLICY, 
