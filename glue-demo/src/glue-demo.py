@@ -87,7 +87,7 @@ def wait_state(exit_pattern, poll_function, *args):
             print ''
             break        
 
-        time.sleep(3)
+        time.sleep(POLL_INTERVAL)
 
 
 def show_tables(client, db_name):
@@ -185,10 +185,10 @@ def start_job_run(client, job_name):
 def wait_iam_propagation():
     print 'Wait %d secs. to allow newly created IAM role to propagate other services.' %IAM_PROPAGATION_DELAY
     print 'WAITING',
-    for i in range(IAM_PROPAGATION_DELAY):
+    for i in range(IAM_PROPAGATION_DELAY/POLL_INTERVAL):
         print '.',
         sys.stdout.flush()
-        time.sleep(1)
+        time.sleep(POLL_INTERVAL)
     print ''
 
 def main():
@@ -204,6 +204,10 @@ def main():
                                endpoint_url='https://%s.%s.amazonaws.com' 
                                %(GLUE_ENDPOINT, DEFAULT_REGION))
 
+
+    # It may take a while as newly created IAM role/policy propagates to other services.
+    # https://aws.amazon.com/premiumsupport/knowledge-center/assume-role-validate-listeners/
+    # Try to create a Glue crawler. Wait a while if it fails. Try max three times.
     num_retries=3    
     for i in range(num_retries):
         success = create_crawler(client=glue_client,
@@ -217,7 +221,6 @@ def main():
         else:
             wait_iam_propagation()
 
-
     start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes db_name exists in Glue DataCatalogue
     # start_crawler is asyncronous -> wait until crawler is in ready state
 
@@ -228,7 +231,7 @@ def main():
 
     show_tables(glue_client, db_name)
 
-
+    # FIXME: refactor repetition, e.g. create_and_run_job()
     etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
     create_job(client=glue_client, 
                job_name=JOB_NAME_INCIDENTS,
