@@ -2,9 +2,9 @@ import boto3
 import time
 import sys
 import re
-from demo_config import *
 
-DEFAULT_SERVICE_ROLE='arn:aws:iam::051356523739:role/service-role/AWSGlueServiceRole-DefaultRole'
+import demo_policy
+from demo_config import *
 
 
 def create_crawler(client, crawler_name, crawler_description, aws_role, 
@@ -34,6 +34,12 @@ def create_crawler(client, crawler_name, crawler_description, aws_role,
         print 'Crated crawler %s.' %crawler_name
     except client.exceptions.AlreadyExistsException as e:
         print 'Crawler "%s" already exists. Use existing crawler!' %crawler_name
+    except client.exceptions.InvalidInputException as e:
+        # IAM role propagation related fix
+        print 'Failed to create crawler.'
+        return False
+
+    return True
 
 def start_crawler(glue_client,crawler_name):
     print 'start_crawler()'
@@ -176,45 +182,65 @@ def start_job_run(client, job_name):
 
     return run_id
 
+def wait_iam_propagation():
+    print 'Wait %d secs. to allow newly created IAM role to propagate other services.' %IAM_PROPAGATION_DELAY
+    print 'WAITING',
+    for i in range(IAM_PROPAGATION_DELAY):
+        print '.',
+        sys.stdout.flush()
+        time.sleep(1)
+    print ''
 
 def main():
-    glue_endpoint = GLUE_ENDPOINT
-    region = DEFAULT_REGION
-    role = DEFAULT_SERVICE_ROLE
+    
     data_input_path = DATA_INPUT_PATH
     db_name = DATABASE_NAME
 
-    glue_client = boto3.client(service_name='glue', region_name=region,
-                               endpoint_url='https://%s.%s.amazonaws.com' 
-                               %(glue_endpoint, region))
+    session = boto3.session.Session()
+    role_arn = demo_policy.create_demo_role_policy(session)
+    #print 'Demo role: %s' %role_arn
 
-    create_crawler(client=glue_client,
-                   crawler_name=CRAWLER_NAME,
-                   crawler_description='Crawler for demo data',
-                   aws_role=role,
-                   db_name=db_name,
-                   s3_target_path=data_input_path)
+    glue_client = session.client(service_name='glue', region_name=DEFAULT_REGION,
+                               endpoint_url='https://%s.%s.amazonaws.com' 
+                               %(GLUE_ENDPOINT, DEFAULT_REGION))
+
+    num_retries=3    
+    for i in range(num_retries):
+        success = create_crawler(client=glue_client,
+                                 crawler_name=CRAWLER_NAME,
+                                 crawler_description='Crawler for demo data',
+                                 aws_role=role_arn,
+                                 db_name=db_name,
+                                 s3_target_path=data_input_path)
+        if success:
+            break
+        else:
+            wait_iam_propagation()
+
 
     start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes db_name exists in Glue DataCatalogue
     # start_crawler is asyncronous -> wait until crawler is in ready state
+
     exit_pattern = re.compile('READY')
     wait_state(exit_pattern, poll_crawler_state, 
                glue_client, CRAWLER_NAME)
+
+
     show_tables(glue_client, db_name)
 
-    '''
+
     etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
     create_job(client=glue_client, 
                job_name=JOB_NAME_INCIDENTS,
                job_description='A job for incidents ETL.',
-               aws_role=role,
+               aws_role=DEMO_ROLE_NAME,
                etl_script_location=etl_script_location)
 
     etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_WEATHER
     create_job(client=glue_client, 
                job_name=JOB_NAME_WEATHER,
                job_description='A job for weather ETL.',
-               aws_role=role,
+               aws_role=DEMO_ROLE_NAME,
                etl_script_location=etl_script_location)
 
     run_id = start_job_run(client=glue_client, job_name=JOB_NAME_INCIDENTS)
@@ -227,7 +253,7 @@ def main():
     wait_state(exit_pattern, poll_job_run_state, 
                glue_client, JOB_NAME_WEATHER, run_id)
 
-    '''
+
 if __name__ == '__main__':
     main()
          
