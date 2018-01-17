@@ -11,6 +11,7 @@ def create_crawler(client, crawler_name, crawler_description, aws_role,
                    db_name, s3_target_path):
 
     print 'create_crawler()'
+
     try:
         response = client.create_crawler(
             Name=crawler_name,
@@ -32,14 +33,14 @@ def create_crawler(client, crawler_name, crawler_description, aws_role,
             }       
         )
         print 'Crated crawler %s.' %crawler_name
+        return 'SUCCESS'
     except client.exceptions.AlreadyExistsException as e:
         print 'Crawler "%s" already exists. Use existing crawler!' %crawler_name
     except client.exceptions.InvalidInputException as e:
-        # IAM role propagation related fix
-        print 'Failed to create crawler.'
-        return False
+        # IAM role has not propagated to Glue service
+        print e
+        return 'FAILED'
 
-    return True
 
 def start_crawler(glue_client,crawler_name):
     print 'start_crawler()'
@@ -66,6 +67,7 @@ def poll_job_run_state(client, job_name, run_id):
         return jr.get('JobRun').get('JobRunState')
     except client.exceptions.EntityNotFoundException as e:
         print 'Job run not found (RunId:%s).' %run_id
+
 
 # boto3 doesn't have built-in waiters for glue crawler.
 # poll crawler status
@@ -182,79 +184,59 @@ def start_job_run(client, job_name):
 
     return run_id
 
-def wait_iam_propagation():
-    print 'Wait %d secs. to allow newly created IAM role to propagate other services.' %IAM_PROPAGATION_DELAY
-    print 'WAITING',
-    for i in range(IAM_PROPAGATION_DELAY/POLL_INTERVAL):
-        print '.',
-        sys.stdout.flush()
-        time.sleep(POLL_INTERVAL)
-    print ''
+def create_and_run_etl_job(client, job_name, job_description):
+    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
+    create_job(client=client, 
+               job_name=job_name,
+               job_description=job_description,
+               aws_role=DEMO_ROLE_NAME,
+               etl_script_location=etl_script_location)
+
+    exit_pattern = re.compile('SUCCEEDED|FAILED|STOPPED')
+    run_id = start_job_run(client=client, job_name=job_name)
+    wait_state(exit_pattern, poll_job_run_state, 
+               client, job_name, run_id)
+
 
 def main():
     
-    data_input_path = DATA_INPUT_PATH
-    db_name = DATABASE_NAME
-
     session = boto3.session.Session()
-    role_arn = demo_policy.create_demo_role_policy(session)
-    #print 'Demo role: %s' %role_arn
-
-    glue_client = session.client(service_name='glue', region_name=DEFAULT_REGION,
-                               endpoint_url='https://%s.%s.amazonaws.com' 
-                               %(GLUE_ENDPOINT, DEFAULT_REGION))
-
-
-    # It may take a while as newly created IAM role/policy propagates to other services.
+    #role_arn = demo_policy.create_demo_role_policy(session)
+    # NOTE: It may take a while as newly created IAM role/policy propagates to other services.
     # https://aws.amazon.com/premiumsupport/knowledge-center/assume-role-validate-listeners/
-    # Try to create a Glue crawler. Wait a while if it fails. Try max three times.
-    num_retries=3    
-    for i in range(num_retries):
-        success = create_crawler(client=glue_client,
-                                 crawler_name=CRAWLER_NAME,
-                                 crawler_description='Crawler for demo data',
-                                 aws_role=role_arn,
-                                 db_name=db_name,
-                                 s3_target_path=data_input_path)
-        if success:
-            break
-        else:
-            wait_iam_propagation()
 
-    start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes db_name exists in Glue DataCatalogue
+    glue_client = session.client(service_name='glue', 
+                                 region_name=DEFAULT_REGION,
+                                 endpoint_url='https://%s.%s.amazonaws.com' 
+                                 %(GLUE_ENDPOINT, DEFAULT_REGION))
+
+    '''
+    exit_pattern = re.compile('SUCCESS')
+    wait_state(exit_pattern, create_crawler,
+               glue_client,
+               CRAWLER_NAME,
+               'Glue demo crawler',
+               role_arn,
+               DATABASE_NAME,
+               DATA_INPUT_PATH)
+
+
+    start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes DATABASE_NAME exists in Glue DataCatalogue
     # start_crawler is asyncronous -> wait until crawler is in ready state
 
     exit_pattern = re.compile('READY')
     wait_state(exit_pattern, poll_crawler_state, 
                glue_client, CRAWLER_NAME)
 
+    show_tables(glue_client, DATABASE_NAME)
+    '''
+    create_and_run_etl_job(client=glue_client,
+                           job_name=JOB_NAME_WEATHER,
+                           job_description='A job for weather ETL.')
 
-    show_tables(glue_client, db_name)
-
-    # FIXME: refactor repetition, e.g. create_and_run_job()
-    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
-    create_job(client=glue_client, 
-               job_name=JOB_NAME_INCIDENTS,
-               job_description='A job for incidents ETL.',
-               aws_role=DEMO_ROLE_NAME,
-               etl_script_location=etl_script_location)
-
-    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_WEATHER
-    create_job(client=glue_client, 
-               job_name=JOB_NAME_WEATHER,
-               job_description='A job for weather ETL.',
-               aws_role=DEMO_ROLE_NAME,
-               etl_script_location=etl_script_location)
-
-    run_id = start_job_run(client=glue_client, job_name=JOB_NAME_INCIDENTS)
-
-    exit_pattern = re.compile('SUCCEEDED|FAILED|STOPPED')
-    wait_state(exit_pattern, poll_job_run_state, 
-               glue_client, JOB_NAME_INCIDENTS, run_id)
-
-    run_id = start_job_run(client=glue_client, job_name=JOB_NAME_WEATHER)
-    wait_state(exit_pattern, poll_job_run_state, 
-               glue_client, JOB_NAME_WEATHER, run_id)
+    create_and_run_etl_job(client=glue_client, 
+                           job_name=JOB_NAME_INCIDENTS,
+                           job_description='A job for incidents ETL.')
 
 
 if __name__ == '__main__':
