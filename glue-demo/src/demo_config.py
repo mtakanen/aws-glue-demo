@@ -15,8 +15,8 @@ ETL_SCRIPT_DIR='s3://'+DEMO_BUCKET_NAME+'/etl-scripts'
 S3_TEMP_DIR='s3://'+DEMO_BUCKET_NAME+'/tmp'
 
 # ETL job names
-JOB_NAME_INCIDENTS='demo-job-incidents'
-JOB_NAME_WEATHER='demo-job-weather'
+JOB_NAME_INCIDENTS='demo_job_incidents'
+JOB_NAME_WEATHER='demo_job_weather'
 
 # Glue generated ETL scripts
 ETL_SCRIPT_INCIDENTS='demo_etl_incidents.py'
