@@ -1,5 +1,5 @@
 DEFAULT_REGION='eu-west-1'
-DEFAULT_BUCKET_NAME='glue-demo-mtakanen' #FIXME -> DEMO_BUCKET_NAME
+DEMO_BUCKET_NAME='glue-demo-mtakanen'
 GLUE_ENDPOINT='glue'
 DATABASE_NAME='demo'
 CRAWLER_NAME='demo-crawler'
@@ -10,17 +10,17 @@ DEMO_POLICY_NAME='GlueDemoPolicy'
 AWS_GLUE_SERVICE_POLICY='arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
 
 # S3 locations used
-DATA_INPUT_PATH='s3://'+DEFAULT_BUCKET_NAME+'/data/input'
-ETL_SCRIPT_DIR='s3://'+DEFAULT_BUCKET_NAME+'/etl-scripts'
-S3_TEMP_DIR='s3://'+DEFAULT_BUCKET_NAME+'/tmp'
+DATA_INPUT_PATH='s3://'+DEMO_BUCKET_NAME+'/data/input'
+ETL_SCRIPT_DIR='s3://'+DEMO_BUCKET_NAME+'/etl-scripts'
+S3_TEMP_DIR='s3://'+DEMO_BUCKET_NAME+'/tmp'
 
 # ETL job names
 JOB_NAME_INCIDENTS='demo-job-incidents'
 JOB_NAME_WEATHER='demo-job-weather'
 
 # Glue generated ETL scripts
-ETL_SCRIPT_INCIDENTS='demo-etl-incidents.py'
-ETL_SCRIPT_WEATHER='demo-etl-weather.py'
+ETL_SCRIPT_INCIDENTS='demo_etl_incidents.py'
+ETL_SCRIPT_WEATHER='demo_etl_weather.py'
 
 # The magic command for glue is documented here: 
 # https://docs.aws.amazon.com/glue/latest/webapi/API_JobCommand.html
