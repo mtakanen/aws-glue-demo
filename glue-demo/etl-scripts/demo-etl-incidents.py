@@ -27,5 +27,5 @@ applymapping1 = ApplyMapping.apply(frame = datasource0, mappings = [("vehicle4",
 ## @args: [connection_type = "s3", connection_options = {"path": "s3://glue-demo-mtakanen/data/output"}, format = "json", transformation_ctx = "datasink2"]
 ## @return: datasink2
 ## @inputs: [frame = applymapping1]
-datasink2 = glueContext.write_dynamic_frame.from_options(frame = applymapping1, connection_type = "s3", connection_options = {"path": "s3://glue-demo-mtakanen/data/output"}, format = "json", transformation_ctx = "datasink2")
+datasink2 = glueContext.write_dynamic_frame.from_options(frame = applymapping1, connection_type = "s3", connection_options = {"path": "s3://glue-demo-mtakanen/data/output"}, format = "csv", transformation_ctx = "datasink2")
 job.commit()
