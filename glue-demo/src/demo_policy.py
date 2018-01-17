@@ -3,7 +3,7 @@ import json
 import unittest
 from demo_config import *
 
-S3_RESOURCE_ARN="arn:aws:s3:::%s/*" %DEFAULT_BUCKET_NAME
+S3_RESOURCE_ARN="arn:aws:s3:::%s/*" %DEMO_BUCKET_NAME
 
 RESOURCE_POLICY = {
     # "Description": "Grants access to a S3 bucket.",
