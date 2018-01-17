@@ -32,7 +32,7 @@ def create_crawler(client, crawler_name, crawler_description, aws_role,
                 'DeleteBehavior': 'DEPRECATE_IN_DATABASE'
             }       
         )
-        print 'Crated crawler %s.' %crawler_name
+        print 'Created crawler %s.' %crawler_name
         return 'SUCCESS'
     except client.exceptions.AlreadyExistsException as e:
         print 'Crawler "%s" already exists. Use existing crawler!' %crawler_name
@@ -106,9 +106,11 @@ def show_tables(client, db_name):
     for table in tables:
         print 'Table name: %s' %table['Name']
         print 'Classification: %s' %table.get('Parameters').get('classification')
+        print 'Record count: %s' %table.get('Parameters').get('recordCount')
+        print 'Avg. record size: %s' %table.get('Parameters').get('averageRecordSize')
+
         storage_desc = table.get('StorageDescriptor')
         print 'Location: %s' %storage_desc.get('Location')
-
         print 'Serde params: %s' %repr(storage_desc.get('SerdeInfo').get('Parameters'))
         print 'Last updated: %s' %table.get('UpdateTime')
 
@@ -168,7 +170,9 @@ def start_job_run(client, job_name):
         resp = client.start_job_run(JobName=job_name,
                                     AllocatedCapacity=MIN_DPU_CAPACITY)
         run_id = resp.get('JobRunId')
-        print 'Job run started (JobRunId:%s).' %run_id
+        print 'Job run started'
+        print 'JobRunId:%s' %run_id
+
     except client.exceptions.ConcurrentRunsExceededException as e:
         print e
     except client.exceptions.EntityNotFoundException as e:
@@ -211,7 +215,6 @@ def main():
                                  endpoint_url='https://%s.%s.amazonaws.com' 
                                  %(GLUE_ENDPOINT, DEFAULT_REGION))
 
-
     exit_pattern = re.compile('SUCCESS')
     wait_state(exit_pattern, create_crawler,
                glue_client,
@@ -221,9 +224,10 @@ def main():
                DATABASE_NAME,
                DATA_INPUT_PATH)
 
-    start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes DATABASE_NAME exists in Glue DataCatalogue
-    # start_crawler is asyncronous -> wait until crawler is in ready state
+    # FIXME: save cents, assumes DATABASE_NAME exists in Glue DataCatalogue
+    start_crawler(glue_client, CRAWLER_NAME) 
 
+    # start_crawler is asyncronous -> wait until crawler is in ready state
     exit_pattern = re.compile('READY')
     wait_state(exit_pattern, poll_crawler_state, 
                glue_client, CRAWLER_NAME)
