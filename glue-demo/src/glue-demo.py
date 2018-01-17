@@ -201,7 +201,8 @@ def create_and_run_etl_job(client, job_name, job_description):
 def main():
     
     session = boto3.session.Session()
-    #role_arn = demo_policy.create_demo_role_policy(session)
+    iam_client = session.client('iam')
+    role_arn = demo_policy.get_or_create_demo_role_policy(iam_client)
     # NOTE: It may take a while as newly created IAM role/policy propagates to other services.
     # https://aws.amazon.com/premiumsupport/knowledge-center/assume-role-validate-listeners/
 
@@ -210,7 +211,7 @@ def main():
                                  endpoint_url='https://%s.%s.amazonaws.com' 
                                  %(GLUE_ENDPOINT, DEFAULT_REGION))
 
-    '''
+
     exit_pattern = re.compile('SUCCESS')
     wait_state(exit_pattern, create_crawler,
                glue_client,
@@ -220,7 +221,6 @@ def main():
                DATABASE_NAME,
                DATA_INPUT_PATH)
 
-
     start_crawler(glue_client, CRAWLER_NAME) # FIXME: save pennies, assumes DATABASE_NAME exists in Glue DataCatalogue
     # start_crawler is asyncronous -> wait until crawler is in ready state
 
@@ -229,7 +229,7 @@ def main():
                glue_client, CRAWLER_NAME)
 
     show_tables(glue_client, DATABASE_NAME)
-    '''
+
     create_and_run_etl_job(client=glue_client,
                            job_name=JOB_NAME_WEATHER,
                            job_description='A job for weather ETL.')
@@ -237,6 +237,7 @@ def main():
     create_and_run_etl_job(client=glue_client, 
                            job_name=JOB_NAME_INCIDENTS,
                            job_description='A job for incidents ETL.')
+
 
 
 if __name__ == '__main__':
