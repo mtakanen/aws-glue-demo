@@ -3,6 +3,7 @@ import json
 from demo_config import *
 
 S3_RESOURCE_ARN="arn:aws:s3:::%s/*" %DEFAULT_BUCKET_NAME
+DEMO_POLICY_ARN = 'arn:aws:iam::051356523739:policy/GlueDemoPolicy' # FIXME
 
 RESOURCE_POLICY = {
     # "Description": "Grants access to a S3 bucket.",
@@ -68,7 +69,7 @@ def delete_demo_role_policy():
 
     iam_client = boto3.client('iam')
     #FIXME: find dynamically, which api?
-    policy_arn = 'arn:aws:iam::051356523739:policy/AWSGlueServiceRole-GlueDemoRole'
+    policy_arn = DEMO_POLICY_ARN
    
     try:
         iam_client.detach_role_policy(PolicyArn=policy_arn,
