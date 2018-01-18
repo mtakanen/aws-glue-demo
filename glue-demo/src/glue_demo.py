@@ -188,13 +188,13 @@ def start_job_run(client, job_name):
 
     return run_id
 
-def create_and_run_etl_job(client, job_name, job_description):
-    etl_script_location = ETL_SCRIPT_DIR+'/'+ETL_SCRIPT_INCIDENTS
+def create_and_run_etl_job(client, job_name, job_description, etl_script_location):
+    script_location = ETL_SCRIPT_DIR+'/'+etl_script_location
     create_job(client=client, 
                job_name=job_name,
                job_description=job_description,
                aws_role=DEMO_ROLE_NAME,
-               etl_script_location=etl_script_location)
+               etl_script_location=script_location)
 
     exit_pattern = re.compile('SUCCEEDED|FAILED|STOPPED')
     run_id = start_job_run(client=client, job_name=job_name)
@@ -237,11 +237,13 @@ def main():
 
     create_and_run_etl_job(client=glue_client,
                            job_name=JOB_NAME_WEATHER,
-                           job_description='A job for weather ETL.')
+                           job_description='A job for weather ETL.',
+                           etl_script_location=ETL_SCRIPT_WEATHER)
 
     create_and_run_etl_job(client=glue_client, 
                            job_name=JOB_NAME_INCIDENTS,
-                           job_description='A job for incidents ETL.')
+                           job_description='A job for incidents ETL.',
+                           etl_script_location=ETL_SCRIPT_INCIDENTS)
 
 
 
