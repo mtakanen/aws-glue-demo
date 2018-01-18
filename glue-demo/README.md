@@ -3,6 +3,8 @@
 AWS Glue Demo is a Python application that demonstrates how to use AWS SDK for Python (Boto3 library) to access AWS Glue and Identity and Access Management (IAM) services. 
 AWS Glue is a fully managed extract, transform, and load (ETL) service that makes it easy for customers to prepare and load their data for analytics. 
 
+https://aws.amazon.com/glue/
+
 ## Prerequisites
 ### Runnning the demo requires: 
 1) Python (python-2.7 is recommended).
@@ -24,6 +26,7 @@ DEMO_BUCKET_NAME/data/output
 DEMO_BUCKET_NAME/etl-srcipts
 DEMO_BUCKET_NAME/tmp
 ```
+
 -input datasets (refer below) uploaded in incidents/ and weather/ folders respectively.
 -ETL scripts uploaded in etl-scripts folder
 
