@@ -38,7 +38,7 @@ $ cd glue-demo/src
 $ python glue_demo.py
 ```
 
-Demo is non-interactive. Progress and some interesting information is printed in stdout (terminal console). Some of the API calls to AWS are asynchronous. Script always waits for service processes to end as following stages depend on the previous results.
+Demo is non-interactive. Progress and some interesting information is printed in stdout (terminal console). Some of the API calls to AWS are asynchronous. Script always waits for service processes to terminate as following stages depend on the previous results.
 
 ## Datasets
 Demo uses two different data sources:
@@ -48,7 +48,7 @@ Demo uses two different data sources:
 Original datasets are available online here:
 https://catalog.data.gov/dataset?res_format=CSV&tags=weather
 
-Datasets have been truncated for demo purposes. Weather data sample (1) is stored in two parts to simulate split data files often necessary when working with large datasets. Glue crawler automatically detects that parts have common database schema as long as the first rows are identical, i.e. all csv parts must contain table column names in the first row.
+Datasets have been truncated for demo purposes. Weather data sample (1) is stored in two parts to simulate split data files often necessary when working with large datasets. Glue crawler automatically detects parts that share a common database schema, as long as the first rows are identical, i.e. all csv file parts must contain table column names in the first row.
 
 ## What does demo do?
 Application first setups a managed resource policy that allows to read and write a user owned S3 resource. It also creates an IAM role and trust policy for Glue service to assume the role. Furthermore, an AWS managed policy is attached to the role that grants access to Glue services.
