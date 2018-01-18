@@ -26,9 +26,8 @@ DEMO_BUCKET_NAME/data/output
 DEMO_BUCKET_NAME/etl-srcipts
 DEMO_BUCKET_NAME/tmp
 ```
-
--input datasets (refer below) uploaded in incidents/ and weather/ folders respectively.
--ETL scripts uploaded in etl-scripts folder
+- input datasets (refer below) uploaded in incidents/ and weather/ folders respectively.
+- ETL scripts uploaded in etl-scripts folder
 
 ## How to run the demo?
 
