@@ -196,7 +196,7 @@ def create_and_run_etl_job(client, job_name, job_description, etl_script_locatio
                aws_role=DEMO_ROLE_NAME,
                etl_script_location=script_location)
 
-    exit_pattern = re.compile('SUCCEEDED|FAILED|STOPPED')
+    exit_pattern = re.compile('(?!RUNNING)') # matches anything but "RUNNING"
     run_id = start_job_run(client=client, job_name=job_name)
     wait_state(exit_pattern, poll_job_run_state, 
                client, job_name, run_id)
@@ -206,7 +206,7 @@ def main():
     print '*** AWS Glue Demo by @mtakanen ***'
 
     session = boto3.session.Session()
-    iam_client = session.client('iam')
+    iam_client = session.client('iam', region_name=DEFAULT_REGION)
     role_arn = demo_policy.get_or_create_demo_role_policy(iam_client)
     # NOTE: It may take a while as newly created IAM role/policy propagates to other services.
     # https://aws.amazon.com/premiumsupport/knowledge-center/assume-role-validate-listeners/
@@ -226,10 +226,10 @@ def main():
                DATA_INPUT_PATH)
 
     # FIXME: save cents, assumes DATABASE_NAME exists in Glue DataCatalogue
-    start_crawler(glue_client, CRAWLER_NAME) 
+    #start_crawler(glue_client, CRAWLER_NAME) 
 
-    # start_crawler is asyncronous -> wait until crawler is in ready state
-    exit_pattern = re.compile('READY')
+    # start_crawler() is asyncronous -> wait until crawler is not "RUNNING"
+    exit_pattern = p=re.compile('(?!RUNNING)')
     wait_state(exit_pattern, poll_crawler_state, 
                glue_client, CRAWLER_NAME)
 
