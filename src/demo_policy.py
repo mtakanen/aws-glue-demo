@@ -127,7 +127,7 @@ def get_or_create_demo_role_policy(client):
         return create_demo_role_policy(client)
         
 
-class demo_policy_tests(unittest.TestCase):
+class Test_demo_policy(unittest.TestCase):
 
     TEST_POLICY_NAME='TestPolicy'    
     TEST_ROLE_NAME='TestRole'
@@ -147,7 +147,6 @@ class demo_policy_tests(unittest.TestCase):
         except self.client.exceptions.NoSuchEntityException as e:
             pass
 
-
     def test_create_managed_policy(self):
         policy_arn = create_managed_policy(self.client, self.TEST_POLICY_NAME)
         assert policy_arn != ''
@@ -165,6 +164,14 @@ class demo_policy_tests(unittest.TestCase):
 
     def test_delete_role_and_policy(self):
         delete_role_and_policy(self.client, DEMO_ROLE_NAME, DEMO_POLICY_NAME)
+        with self.assertRaises(self.client.exceptions.NoSuchEntityException):
+            response = self.client.get_role(RoleName=self.TEST_ROLE_NAME)
+
+        response = self.client.list_policies(Scope='Local')
+        for policy in response.get('Policies'):
+            self.assertNotEqual(policy.get('PolicyName'), self.TEST_POLICY_NAME)
+
+
 
 if __name__ == "__main__":
     unittest.main()
