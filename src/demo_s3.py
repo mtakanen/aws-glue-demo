@@ -6,7 +6,7 @@ import unittest
 from demo_config import *
 
 '''
-Utils for S3 related demo setup. 
+Contains utils for S3 related demo setup. 
 USAGE:
 if not bucket_exists(bucket_name):
     setup_s3(bucket_name)
@@ -15,12 +15,11 @@ else:
 '''
 
 def create_bucket(client, bucket_name):
-    response = client.create_bucket(ACL='private', Bucket=bucket_name, 
-                                    CreateBucketConfiguration=
-                                    {
-                                       'LocationConstraint':DEFAULT_REGION
-                                    })
-    return response
+    client.create_bucket(ACL='private', Bucket=bucket_name, 
+                         CreateBucketConfiguration=
+                         {
+                             'LocationConstraint':DEFAULT_REGION
+                         })
 
 def bucket_exists(s3_client, bucket_name):
     try:
