@@ -52,7 +52,7 @@ def create_managed_policy(iam_client, policy_name):
     return policy_arn
 
 def create_role(iam_client, role_name):
-    print 'create_role'
+    print 'create_role()'
 
     try:
         response = iam_client.create_role(
