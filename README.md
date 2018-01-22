@@ -36,7 +36,9 @@ https://catalog.data.gov/dataset?res_format=CSV&tags=weather
 Datasets have been truncated for demo purposes. Weather data sample (1) is stored in two parts to simulate split data files often necessary when working with large datasets. Glue crawler automatically detects parts that share a common database schema, as long as they are found in same folder and the first rows are identical, i.e. all csv file parts must contain table column names in the first row.
 
 ## What does demo do?
-Application first setups a managed resource policy that allows to read and write a user owned S3 resource. It also creates an IAM role and trust policy for Glue service to assume the role. Furthermore, an AWS managed policy is attached to the role that grants access to Glue services. Application also setups data resources in S3. Bucket named DEMO_BUCKET_NAME (refer demo_config.py) is created and input datafiles are uploaded in predefined folders as follows:
+Application first setups a managed resource policy that allows to read and write a user owned S3 resource. It also creates an IAM role and trust policy for Glue service to assume the role. Furthermore, an AWS managed policy is attached to the role that grants access to Glue services. 
+
+Application also setups data resources in S3. Bucket named DEMO_BUCKET_NAME (refer demo_config.py) is created and input datafiles are uploaded in folders as follows:
 ```
 DEMO_BUCKET_NAME/data 
 DEMO_BUCKET_NAME/data/input
@@ -51,4 +53,4 @@ As IAM policies and data resources are in place we start using actual Glue servi
 As a final stage we create ETL jobs for both datasets and run them. Each ETL job exctracts a dataset in the data catalogue, transforms it and finally loads the actual data in a S3 folder. We make simple trasformations: For dataset (1) ETL script requests a column type change, and for dataset (2) file format is conversed from json to csv. By default Glue generates as many output files as it has found input files.
 
 ## Shortcomings
-The ETL scripts used in create_job() are actually genererated by AWS Glue service. ETL jobs similar to those in this demo were created in Glue Console with the same datasinks as demo uses. According to documentation it is possible to generate the ETL scripts with Boto3. Note 1: ETL scripts can only be run inside the Glue service due to dependencies to low level AWS libraries. Note 2: If DEMO_BUCKET_NAME is changed, connection_options = {"path": "s3://glue-demo-bucket/data/output" in ETL scripts must be edited accordingly.
+The ETL scripts used in create_job() are actually genererated by AWS Glue service. ETL jobs similar to those in this demo were created in Glue Console with the same datasinks as demo uses. According to documentation it is possible to generate the ETL scripts with Boto3. Note 1: ETL scripts can only be run inside the Glue service due to dependencies to low level AWS libraries. Note 2: If DEMO_BUCKET_NAME is changed, connection_options = {"path": "s3://DEMO_BUCKET_NAME/data/output" in ETL scripts must be edited accordingly.
