@@ -4,6 +4,7 @@ import sys
 import re
 
 import demo_policy
+import demo_s3
 from demo_config import *
 
 
@@ -208,8 +209,17 @@ def main():
     session = boto3.session.Session()
     iam_client = session.client('iam', region_name=DEFAULT_REGION)
     role_arn = demo_policy.get_or_create_demo_role_policy(iam_client)
+
     # NOTE: It may take a while as newly created IAM role/policy propagates to other services.
     # https://aws.amazon.com/premiumsupport/knowledge-center/assume-role-validate-listeners/
+
+    s3_client = session.client('s3', region_name=DEFAULT_REGION)
+    if not demo_s3.bucket_exists(s3_client, DEMO_BUCKET_NAME):
+        demo_s3.setup_s3(s3_client, DEMO_BUCKET_NAME)
+    else:
+        print "FATAL: bucket (%s) exists in region (%s)." %(DEMO_BUCKET_NAME, DEFAULT_REGION)
+        exit(1)
+
 
     glue_client = session.client(service_name='glue', 
                                  region_name=DEFAULT_REGION,
@@ -225,8 +235,7 @@ def main():
                DATABASE_NAME,
                DATA_INPUT_PATH)
 
-    # FIXME: save cents, assumes DATABASE_NAME exists in Glue DataCatalogue
-    #start_crawler(glue_client, CRAWLER_NAME) 
+    start_crawler(glue_client, CRAWLER_NAME) 
 
     # start_crawler() is asyncronous -> wait until crawler is not "RUNNING"
     exit_pattern = p=re.compile('(?!RUNNING)')
