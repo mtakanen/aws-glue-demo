@@ -74,7 +74,7 @@ def delete_bucket_contents(s3_client, bucket_name):
     s3_client.delete_bucket(Bucket=bucket_name)
 
 
-class Test_create_bucket(unittest.TestCase):
+class Test_demo_s3(unittest.TestCase):
     import uuid
 
     TEST_BUCKET_NAME='test-bucket-%s' %str(uuid.uuid4())
