@@ -1,5 +1,5 @@
 DEFAULT_REGION='eu-west-1'
-DEMO_BUCKET_NAME='glue-demo-mtakanen'
+DEMO_BUCKET_NAME='glue-demo-bucket'
 GLUE_ENDPOINT='glue'
 DATABASE_NAME='demo'
 CRAWLER_NAME='demo-crawler'
@@ -28,9 +28,6 @@ ETL_COMMAND_NAME='glueetl'
 
 # https://docs.aws.amazon.com/glue/latest/dg/aws-glue-api-jobs-runs.html
 MIN_DPU_CAPACITY=2
-
-# magic delay to allow IAM role to propagate other services
-IAM_PROPAGATION_DELAY=9
 
 # interval in seconds for polling service state
 POLL_INTERVAL=3
