@@ -5,14 +5,13 @@ import unittest
 
 from demo_config import *
 
-'''
-Contains utils for S3 related demo setup. 
+"""Contains utils for S3 related demo setup. 
 USAGE:
 if not bucket_exists(bucket_name):
     setup_s3(bucket_name)
 else:
    print "bucket_name must be unique in region."
-'''
+"""
 
 def create_bucket(client, bucket_name):
     client.create_bucket(ACL='private', Bucket=bucket_name, 

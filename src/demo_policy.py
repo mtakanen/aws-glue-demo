@@ -3,6 +3,8 @@ import json
 import unittest
 from demo_config import *
 
+"""Setups role and policy required by demo. Contains AWS IAM related functions."""
+
 S3_RESOURCE_ARN="arn:aws:s3:::%s/*" %DEMO_BUCKET_NAME
 
 RESOURCE_POLICY = {

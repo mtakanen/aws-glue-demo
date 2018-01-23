@@ -7,6 +7,7 @@ import demo_policy
 import demo_s3
 from demo_config import *
 
+"""Main script of the demo. Contains AWS Glue related functions."""
 
 def create_crawler(client, crawler_name, crawler_description, aws_role, 
                    db_name, s3_target_path):
@@ -68,29 +69,6 @@ def poll_job_run_state(client, job_name, run_id):
         return jr.get('JobRun').get('JobRunState')
     except client.exceptions.EntityNotFoundException as e:
         print 'Job run not found (RunId:%s).' %run_id
-
-
-# boto3 doesn't have built-in waiters for glue crawler.
-# poll crawler status
-def wait_state(exit_pattern, poll_function, *args):
-
-    prev_state=''
-    while True:
-        state = poll_function(*args)
-        if not state:
-            break
-        if state != prev_state:
-            prev_state = state
-            print('\n%s' %state), # discard newline, (python2.x only)
-            sys.stdout.flush() 
-        else:
-            print('.'),
-            sys.stdout.flush()
-        if exit_pattern.match(state):
-            print ''
-            break        
-
-        time.sleep(POLL_INTERVAL)
 
 
 def show_tables(client, db_name):
@@ -203,7 +181,30 @@ def create_and_run_etl_job(client, job_name, job_description, etl_script_locatio
                client, job_name, run_id)
 
 
+def wait_state(exit_pattern, poll_function, *args):
+    """Waiter function for asynchronous service calls as Boto3 doesn't provide built-in waiters 
+    for Glue. Polls the status of a Glue process with poll_function passed as an argument."""
+
+    prev_state=''
+    while True:
+        state = poll_function(*args)
+        if not state:
+            break
+        if state != prev_state:
+            prev_state = state
+            print('\n%s' %state), # discard newline, (python2.x only)
+            sys.stdout.flush() 
+        else:
+            print('.'),
+            sys.stdout.flush()
+        if exit_pattern.match(state):
+            print ''
+            break        
+
+        time.sleep(POLL_INTERVAL)
+
 def main():
+    """Demo application main function. Setups AWS dependencies and sequences demo steps."""
     print '*** AWS Glue Demo by @mtakanen ***'
 
     session = boto3.session.Session()

@@ -1,3 +1,5 @@
+"""Demo configuration. Contains constants used in the demo."""
+
 DEFAULT_REGION='eu-west-1'
 DEMO_BUCKET_NAME='glue-demo-bucket'
 GLUE_ENDPOINT='glue'
