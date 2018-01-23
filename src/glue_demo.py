@@ -2,6 +2,7 @@ import boto3
 import time
 import sys
 import re
+import unittest
 
 import demo_policy
 import demo_s3
@@ -218,7 +219,8 @@ def main():
     if not demo_s3.bucket_exists(s3_client, DEMO_BUCKET_NAME):
         demo_s3.setup_s3(s3_client, DEMO_BUCKET_NAME)
     else:
-        print "FATAL: bucket (%s) exists in region (%s)." %(DEMO_BUCKET_NAME, DEFAULT_REGION)
+        print 'FATAL: bucket (%s) exists in region (%s).' %(DEMO_BUCKET_NAME, DEFAULT_REGION)
+        print "TIP: Use setup_s3.delete_bucket_contents(s3, '%s') to delete it." %DEMO_BUCKET_NAME
         exit(1)
 
 
@@ -256,6 +258,36 @@ def main():
                            etl_script_location=ETL_SCRIPT_INCIDENTS)
 
 
+class Test_glue_demo(unittest.TestCase):
+    """Unittests for glue_demo module.
+    USAGE:
+    python -m unittest glue_demo.Test_glue_demo """
+
+    import time
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_wait_state_ready(self):
+        def poll_func(response):
+            return response
+        
+        exit_pattern = re.compile('READY')
+        wait_state(exit_pattern, poll_func, 'READY')
+
+    def test_wait_state_until_time(self):
+        def poll_time(until_time):
+            if until_time > time.time():
+                return 'RUNNING'
+            else:
+                return 'SUCCESS'
+
+        until_time = time.time() + 2 * POLL_INTERVAL
+        exit_pattern = re.compile('SUCCESS')
+        wait_state(exit_pattern, poll_time, until_time)
 
 if __name__ == '__main__':
     main()
