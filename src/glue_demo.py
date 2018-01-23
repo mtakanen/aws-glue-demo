@@ -223,11 +223,11 @@ def main():
         print "TIP: Use setup_s3.delete_bucket_contents(s3, '%s') to delete it." %DEMO_BUCKET_NAME
         exit(1)
 
-
     glue_client = session.client(service_name='glue', 
                                  region_name=DEFAULT_REGION,
                                  endpoint_url='https://%s.%s.amazonaws.com' 
                                  %(GLUE_ENDPOINT, DEFAULT_REGION))
+
 
     exit_pattern = re.compile('SUCCESS')
     wait_state(exit_pattern, create_crawler,
@@ -257,6 +257,10 @@ def main():
                            job_description='A job for incidents ETL.',
                            etl_script_location=ETL_SCRIPT_INCIDENTS)
 
+    print 'Output files in S3:'
+    output_keys = demo_s3.list_folder_keys(s3_client, DEMO_BUCKET_NAME, DATA_OUTPUT_FOLDER)
+    for key in output_keys:
+        print "%s/%s" %(DEMO_BUCKET_NAME, key)
 
 class Test_glue_demo(unittest.TestCase):
     """Unittests for glue_demo module.

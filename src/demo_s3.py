@@ -54,7 +54,7 @@ def setup_s3(s3_client, bucket_name):
                     os.path.join(s3_datapath, fname))
 
     # create output folder
-    s3_client.put_object(ACL='private', Bucket=bucket_name, Key='data/output/')
+    s3_client.put_object(ACL='private', Bucket=bucket_name, Key=DATA_OUTPUT_FOLDER)
 
     #upload etl scripts
     local_script_path = os.path.join(project_root, 'etl-scripts')
@@ -63,6 +63,16 @@ def setup_s3(s3_client, bucket_name):
         upload_file(s3, bucket_name, 
                     os.path.join(local_script_path, fname), 
                     os.path.join(s3_datapath, fname))
+
+def list_folder_keys(s3_client, bucket_name, path_prefix):
+    # first delete contents of bucket
+    keys = []
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=path_prefix)
+    for c in response.get('Contents'):
+        if not c.get('Key').endswith(path_prefix): # skips folder name            
+            keys.append(c.get('Key'))
+
+    return keys
 
 def delete_bucket_contents(s3_client, bucket_name):
     # first delete contents of bucket
@@ -167,8 +177,19 @@ class Test_demo_s3(unittest.TestCase):
             except self.client.exceptions.ClientError as e:
                 self.fail("%s (%s)" %(e,fname))
 
-        
-            
+    def test_list_folder_contents(self):
+
+        create_bucket(self.client, self.TEST_BUCKET_NAME)
+        put_object(self.client, self.TEST_BUCKET_NAME, 'folder_name1/filename1')
+        put_object(self.client, self.TEST_BUCKET_NAME, 'folder_name2/filename2')
+        put_object(self.client, self.TEST_BUCKET_NAME, 'folder_name2/filename3')
+        path_prefix = 'folder_name2'
+
+        keys = list_folder_keys(self.client, self.TEST_BUCKET_NAME, path_prefix)
+        for key in keys:
+           self.assertTrue(key.startswith(path_prefix))
+           self.assertFalse(key.endswith(path_prefix))
+
 if __name__ == "__main__":
     unittest.main()
 

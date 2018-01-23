@@ -13,6 +13,7 @@ AWS_GLUE_SERVICE_POLICY='arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
 
 # S3 locations used
 DATA_INPUT_PATH='s3://'+DEMO_BUCKET_NAME+'/data/input'
+DATA_OUTPUT_FOLDER='data/output/'
 ETL_SCRIPT_DIR='s3://'+DEMO_BUCKET_NAME+'/etl-scripts'
 S3_TEMP_DIR='s3://'+DEMO_BUCKET_NAME+'/tmp'
 
