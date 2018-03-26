@@ -1,6 +1,6 @@
 import boto3
 import time
-import sys
+import sys, os
 import re
 import unittest
 
@@ -208,25 +208,24 @@ def main():
     """Demo application main function. Setups AWS dependencies and sequences demo steps."""
     print '*** AWS Glue Demo by @mtakanen ***'
 
-    session = boto3.session.Session()
-    iam_client = session.client('iam', region_name=DEFAULT_REGION)
+    iam_client = boto3.client('iam', region_name=DEFAULT_REGION)
     role_arn = demo_policy.get_or_create_demo_role_policy(iam_client)
 
     # NOTE: It may take a while as newly created IAM role/policy propagates to other services.
     # https://aws.amazon.com/premiumsupport/knowledge-center/assume-role-validate-listeners/
 
-    s3_client = session.client('s3', region_name=DEFAULT_REGION)
+    s3_client = boto3.client('s3', region_name=DEFAULT_REGION)
+    
     if not demo_s3.bucket_exists(s3_client, DEMO_BUCKET_NAME):
         demo_s3.setup_s3(s3_client, DEMO_BUCKET_NAME)
     else:
         print 'FATAL: bucket (%s) exists in region (%s).' %(DEMO_BUCKET_NAME, DEFAULT_REGION)
-        print "TIP: Use setup_s3.delete_bucket_contents(s3, '%s') to delete it." %DEMO_BUCKET_NAME
         exit(1)
 
-    glue_client = session.client(service_name='glue', 
-                                 region_name=DEFAULT_REGION,
-                                 endpoint_url='https://%s.%s.amazonaws.com' 
-                                 %(GLUE_ENDPOINT, DEFAULT_REGION))
+    glue_client = boto3.client(service_name='glue', 
+                               region_name=DEFAULT_REGION,
+                               endpoint_url='https://%s.%s.amazonaws.com' 
+                               %(GLUE_ENDPOINT, DEFAULT_REGION))
 
 
     exit_pattern = re.compile('SUCCESS')

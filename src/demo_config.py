@@ -1,7 +1,8 @@
+import datetime
 """Demo configuration. Contains constants used in the demo."""
 
 DEFAULT_REGION='eu-west-1'
-DEMO_BUCKET_NAME='glue-demo-bucket'
+DEMO_BUCKET_NAME='glue-demo-bucket-%s' %str(datetime.datetime.now().date()) + '-' + str(datetime.datetime.now().time()).replace(':', '').replace('.','')
 GLUE_ENDPOINT='glue'
 DATABASE_NAME='demo'
 CRAWLER_NAME='demo-crawler'

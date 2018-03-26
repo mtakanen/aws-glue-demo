@@ -14,7 +14,8 @@ else:
 """
 
 def create_bucket(client, bucket_name):
-    client.create_bucket(ACL='private', Bucket=bucket_name, 
+    s3 = boto3.resource('s3', region_name=DEFAULT_REGION)
+    s3.create_bucket(ACL='private', Bucket=bucket_name, 
                          CreateBucketConfiguration=
                          {
                              'LocationConstraint':DEFAULT_REGION
